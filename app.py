@@ -16,13 +16,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    await update.message.reply_text(f"جارٍ البحث عن: {text}\n(هذه نسخة تجريبية)")
+    await update.message.reply_text(f"جاري البحث عن: {text}\n(هذه نسخة تجريبية)")
 
 bot_app.add_handler(CommandHandler("start", start))
 bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # Webhook endpoint
-@app.route(f"/{TOKEN}", methods=["POST"])
+@app.route("/webhook", methods=["POST"])
 def webhook():
     if request.method == "POST":
         update = Update.de_json(request.get_json(force=True), bot_app.bot)
@@ -34,5 +34,5 @@ if __name__ == "__main__":
     bot_app.run_webhook(
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 10000)),
-        webhook_url=f"https://telegram-bot-9bnb.onrender.com/{TOKEN}"
+        webhook_url="https://telegram-bot-9bnb.onrender.com/webhook"
     )
