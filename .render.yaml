@@ -1,1 +1,9 @@
-# .render.yaml - dummy content
+services:
+  - type: web
+    name: telegram-osint-auto
+    env: python
+    buildCommand: bash setup/install_tools.sh
+    startCommand: python3 main.py
+    plan: free
+    branch: main
+    autoDeploy: true
