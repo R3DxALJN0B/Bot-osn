@@ -2,30 +2,31 @@ import os
 import re
 import subprocess
 from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, MessageHandler, filters, CallbackContext
+import telegram
+from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
 
-# جلب التوكن من البيئة
-TOKEN = os.environ.get("BOT_TOKEN")
-bot = Bot(token=TOKEN)
+# ملاحظة: في بيئة الإنتاج استخدم os.environ.get("BOT_TOKEN") بدلاً من كتابة التوكن مباشرة
+TOKEN = "7690572227:AAHfLU9xMEeBVaBWCdwCJLlbVjML7zeXoms"
 
-# إعداد Flask
+bot = telegram.Bot(token=TOKEN)
 app = Flask(__name__)
 
-# التحقق من أنواع الإدخال
+# Dispatcher ثابت
+dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, lambda update, context: handle_message(update, context)))
+
 def is_email(text):
     return re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", text)
 
 def is_phone(text):
     return re.match(r"^\+?\d{7,15}$", text)
 
-# تشغيل الأدوات
 def run_command(command_list, cwd=None):
     try:
         result = subprocess.run(command_list, capture_output=True, text=True, timeout=60, cwd=cwd)
         return result.stdout[-4000:] if result.stdout else "لا توجد نتائج."
     except Exception as e:
-        return f"حدث خطأ: {str(e)}"
+        return f"حدث خطأ أثناء التنفيذ: {str(e)}"
 
 def run_sherlock(name):
     return run_command(["python3", "sherlock/sherlock.py", name, "--print-found"], cwd="sherlock")
@@ -39,35 +40,34 @@ def run_theharvester(email):
         "-d", email.split("@")[-1], "-b", "google,bing,duckduckgo"
     ], cwd="theHarvester")
 
-# المعالجة الرئيسية للرسائل
-def handle_message(update: Update, context: CallbackContext):
-    text = update.message.text.strip()
-    chat_id = update.effective_chat.id
+def handle_message(update, context: CallbackContext):
+    try:
+        text = update.message.text.strip()
+        chat_id = update.message.chat_id
 
-    if is_email(text):
-        result = run_theharvester(text)
-    elif is_phone(text):
-        result = run_phoneinfoga(text)
-    else:
-        result = run_sherlock(text)
+        if is_email(text):
+            result = run_theharvester(text)
+        elif is_phone(text):
+            result = run_phoneinfoga(text)
+        else:
+            result = run_sherlock(text)
 
-    context.bot.send_message(chat_id=chat_id, text=result or "لم يتم العثور على نتائج.")
+        context.bot.send_message(chat_id=chat_id, text=result or "لم يتم العثور على نتائج.")
+    except Exception as e:
+        print(f"خطأ في handle_message: {str(e)}")
 
-# المسار الرئيسي لعرض أن البوت يعمل
 @app.route("/", methods=["GET"])
 def index():
-    return "Bot is running!"
+    return "البوت شغال بنجاح!"
 
-# webhook الخاص بـ Telegram
 @app.route("/", methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher = Dispatcher(bot=bot, update_queue=None, workers=0)
-    dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    dispatcher.process_update(update)
+    try:
+        update = telegram.Update.de_json(request.get_json(force=True), bot)
+        dispatcher.process_update(update)
+    except Exception as e:
+        print(f"خطأ في webhook: {str(e)}")
     return "OK"
 
-# التشغيل المحلي (لن يعمل على Render)
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)
