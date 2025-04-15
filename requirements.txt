@@ -1,1 +1,2 @@
-# requirements.txt - dummy content
+Flask
+python-telegram-bot==13.15
