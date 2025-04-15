@@ -47,6 +47,10 @@ def handle_message(update, context):
 
     context.bot.send_message(chat_id=chat_id, text=result or "لم يتم العثور على نتائج.")
 
+@app.route("/", methods=["GET"])
+def index():
+    return "البوت شغال بنجاح!"
+
 @app.route("/", methods=["POST"])
 def webhook():
     update = telegram.Update.de_json(request.get_json(force=True), bot)
